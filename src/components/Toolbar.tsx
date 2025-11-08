@@ -9,9 +9,11 @@ interface ToolbarProps {
   onAddCone: () => void;
   onAddTorus: () => void;
   onAddPlane: () => void;
+  onRender: () => void;
+  onRenderSettings: () => void;
 }
 
-export function Toolbar({ onAddCube, onAddSphere, onAddCylinder, onAddCone, onAddTorus, onAddPlane }: ToolbarProps) {
+export function Toolbar({ onAddCube, onAddSphere, onAddCylinder, onAddCone, onAddTorus, onAddPlane, onRender, onRenderSettings }: ToolbarProps) {
   const [activeTab, setActiveTab] = useState<string>('create');
 
   // Define all tabs as configuration objects
@@ -75,9 +77,20 @@ export function Toolbar({ onAddCube, onAddSphere, onAddCylinder, onAddCone, onAd
     {
       id: 'render',
       label: 'Render',
-      buttons: [],
+      buttons: [
+        {
+          label: 'Render',
+          tooltip: 'Render the scene',
+          action: onRender,
+        },
+        {
+          label: 'Render Settings',
+          tooltip: 'Configure render settings',
+          action: onRenderSettings,
+        },
+      ],
     },
-  ], [onAddCube, onAddSphere, onAddCylinder, onAddCone, onAddTorus, onAddPlane]);
+  ], [onAddCube, onAddSphere, onAddCylinder, onAddCone, onAddTorus, onAddPlane, onRender, onRenderSettings]);
 
   const activeTabConfig = tabs.find(tab => tab.id === activeTab);
 

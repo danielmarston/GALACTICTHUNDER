@@ -7,6 +7,7 @@ export class SceneManager {
   private objectCounter: number;
   private selectedObjectId: string | null = null;
   private outlineMesh: THREE.Mesh | null = null;
+  private perspectiveCamera: THREE.PerspectiveCamera | null = null;
 
   constructor() {
     this.scene = new THREE.Scene();
@@ -255,5 +256,13 @@ export class SceneManager {
         this.outlineMesh.scale.copy(obj.mesh.scale).multiplyScalar(1.05);
       }
     }
+  }
+
+  setPerspectiveCamera(camera: THREE.PerspectiveCamera): void {
+    this.perspectiveCamera = camera;
+  }
+
+  getPerspectiveCamera(): THREE.PerspectiveCamera | null {
+    return this.perspectiveCamera;
   }
 }

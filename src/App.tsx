@@ -4,6 +4,8 @@ import { Toolbar } from './components/Toolbar';
 import { SceneHierarchy } from './components/SceneHierarchy';
 import { ParametersPanel } from './components/ParametersPanel';
 import { ResizablePanel } from './components/ResizablePanel';
+import { RenderModal } from './components/RenderModal';
+import { RenderSettingsModal, type RenderSettings } from './components/RenderSettingsModal';
 import { SceneManager } from './scene/SceneManager';
 import type { SceneObject } from './types/types';
 import './App.css';
@@ -12,6 +14,17 @@ function App() {
   const [sceneManager] = useState(() => new SceneManager());
   const [objects, setObjects] = useState<SceneObject[]>([]);
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
+  const [isRenderModalOpen, setIsRenderModalOpen] = useState(false);
+  const [isRenderSettingsOpen, setIsRenderSettingsOpen] = useState(false);
+  const [renderSettings, setRenderSettings] = useState<RenderSettings>({
+    samples: 250,
+    bounces: 5,
+    transmissiveBounces: 5,
+    tileX: 2,
+    tileY: 2,
+    resolutionWidth: 800,
+    resolutionHeight: 600,
+  });
 
   useEffect(() => {
     // Update objects list initially
@@ -82,6 +95,8 @@ function App() {
         onAddCone={handleAddCone}
         onAddTorus={handleAddTorus}
         onAddPlane={handleAddPlane}
+        onRender={() => setIsRenderModalOpen(true)}
+        onRenderSettings={() => setIsRenderSettingsOpen(true)}
       />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <div style={{ flex: 1, overflow: 'hidden' }}>
@@ -106,6 +121,18 @@ function App() {
           </div>
         </ResizablePanel>
       </div>
+      <RenderModal 
+        isOpen={isRenderModalOpen}
+        onClose={() => setIsRenderModalOpen(false)}
+        sceneManager={sceneManager}
+        settings={renderSettings}
+      />
+      <RenderSettingsModal 
+        isOpen={isRenderSettingsOpen}
+        onClose={() => setIsRenderSettingsOpen(false)}
+        settings={renderSettings}
+        onSave={setRenderSettings}
+      />
     </div>
   );
 }

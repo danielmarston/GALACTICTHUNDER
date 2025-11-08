@@ -344,6 +344,11 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, selectedOb
     viewportScene.add(transformControls.getHelper());
     transformControlsRef.current = transformControls;
 
+    // Call onMount callback if provided
+    if (onMount) {
+      onMount(camera, renderer);
+    }
+
     // Animation loop
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);

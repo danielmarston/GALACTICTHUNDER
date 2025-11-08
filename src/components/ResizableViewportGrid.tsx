@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react';
+import * as THREE from 'three';
 import { Viewport } from './Viewport';
 import type { SceneManager } from '../scene/SceneManager';
 
@@ -85,7 +86,18 @@ export function ResizableViewportGrid({ sceneManager, onSelectObject, selectedOb
     >
       {/* Top-left: Perspective */}
       <div style={{ gridColumn: '1', gridRow: '1', overflow: 'hidden' }}>
-        <Viewport type="perspective" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
+        <Viewport 
+          type="perspective" 
+          scene={scene} 
+          sceneManager={sceneManager} 
+          onSelectObject={onSelectObject} 
+          selectedObjectId={selectedObjectId}
+          onMount={(camera) => {
+            if (camera.type === 'PerspectiveCamera') {
+              sceneManager.setPerspectiveCamera(camera as THREE.PerspectiveCamera);
+            }
+          }}
+        />
       </div>
       
       {/* Vertical splitter (full height) */}
