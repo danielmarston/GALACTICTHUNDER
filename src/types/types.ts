@@ -5,7 +5,7 @@ export type ViewportType = 'front' | 'left' | 'top' | 'perspective';
 export interface SceneObject {
   id: string;
   name: string;
-  type: 'cube' | 'sphere';
+  type: 'cube' | 'sphere' | 'cylinder' | 'cone' | 'torus' | 'plane';
   mesh: THREE.Mesh;
 }
 

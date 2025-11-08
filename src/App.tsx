@@ -28,6 +28,26 @@ function App() {
     setObjects(sceneManager.getObjects());
   };
 
+  const handleAddCylinder = () => {
+    sceneManager.addCylinder();
+    setObjects(sceneManager.getObjects());
+  };
+
+  const handleAddCone = () => {
+    sceneManager.addCone();
+    setObjects(sceneManager.getObjects());
+  };
+
+  const handleAddTorus = () => {
+    sceneManager.addTorus();
+    setObjects(sceneManager.getObjects());
+  };
+
+  const handleAddPlane = () => {
+    sceneManager.addPlane();
+    setObjects(sceneManager.getObjects());
+  };
+
   const handleDeleteObject = (id: string) => {
     sceneManager.removeObject(id);
     if (selectedObjectId === id) {
@@ -55,7 +75,14 @@ function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
-      <Toolbar onAddCube={handleAddCube} onAddSphere={handleAddSphere} />
+      <Toolbar 
+        onAddCube={handleAddCube} 
+        onAddSphere={handleAddSphere}
+        onAddCylinder={handleAddCylinder}
+        onAddCone={handleAddCone}
+        onAddTorus={handleAddTorus}
+        onAddPlane={handleAddPlane}
+      />
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <ResizableViewportGrid 

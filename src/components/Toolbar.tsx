@@ -5,9 +5,13 @@ import type { TabConfig } from './toolbar/types';
 interface ToolbarProps {
   onAddCube: () => void;
   onAddSphere: () => void;
+  onAddCylinder: () => void;
+  onAddCone: () => void;
+  onAddTorus: () => void;
+  onAddPlane: () => void;
 }
 
-export function Toolbar({ onAddCube, onAddSphere }: ToolbarProps) {
+export function Toolbar({ onAddCube, onAddSphere, onAddCylinder, onAddCone, onAddTorus, onAddPlane }: ToolbarProps) {
   const [activeTab, setActiveTab] = useState<string>('create');
 
   // Define all tabs as configuration objects
@@ -25,6 +29,26 @@ export function Toolbar({ onAddCube, onAddSphere }: ToolbarProps) {
           label: 'Add Sphere',
           tooltip: 'Add a sphere to the scene',
           action: onAddSphere,
+        },
+        {
+          label: 'Add Cylinder',
+          tooltip: 'Add a cylinder to the scene',
+          action: onAddCylinder,
+        },
+        {
+          label: 'Add Cone',
+          tooltip: 'Add a cone to the scene',
+          action: onAddCone,
+        },
+        {
+          label: 'Add Torus',
+          tooltip: 'Add a torus to the scene',
+          action: onAddTorus,
+        },
+        {
+          label: 'Add Plane',
+          tooltip: 'Add a plane to the scene',
+          action: onAddPlane,
         },
       ],
     },
@@ -53,7 +77,7 @@ export function Toolbar({ onAddCube, onAddSphere }: ToolbarProps) {
       label: 'Render',
       buttons: [],
     },
-  ], [onAddCube, onAddSphere]);
+  ], [onAddCube, onAddSphere, onAddCylinder, onAddCone, onAddTorus, onAddPlane]);
 
   const activeTabConfig = tabs.find(tab => tab.id === activeTab);
 

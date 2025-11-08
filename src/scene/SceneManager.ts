@@ -35,9 +35,35 @@ export class SceneManager {
     return this.scene;
   }
 
+  private getRandomColor(): number {
+    // Generate a random color that's reasonably bright and visible
+    const hue = Math.random();
+    const saturation = 0.6 + Math.random() * 0.4; // 0.6-1.0
+    const lightness = 0.5 + Math.random() * 0.2; // 0.5-0.7
+    
+    // Convert HSL to RGB
+    const c = (1 - Math.abs(2 * lightness - 1)) * saturation;
+    const x = c * (1 - Math.abs((hue * 6) % 2 - 1));
+    const m = lightness - c / 2;
+    
+    let r = 0, g = 0, b = 0;
+    if (hue < 1/6) { r = c; g = x; b = 0; }
+    else if (hue < 2/6) { r = x; g = c; b = 0; }
+    else if (hue < 3/6) { r = 0; g = c; b = x; }
+    else if (hue < 4/6) { r = 0; g = x; b = c; }
+    else if (hue < 5/6) { r = x; g = 0; b = c; }
+    else { r = c; g = 0; b = x; }
+    
+    r = Math.round((r + m) * 255);
+    g = Math.round((g + m) * 255);
+    b = Math.round((b + m) * 255);
+    
+    return (r << 16) | (g << 8) | b;
+  }
+
   addCube(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
     const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshPhongMaterial({ color: 0x00aaff });
+    const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.copy(position);
 
@@ -57,7 +83,7 @@ export class SceneManager {
 
   addSphere(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
     const geometry = new THREE.SphereGeometry(0.5, 32, 32);
-    const material = new THREE.MeshPhongMaterial({ color: 0xff6b00 });
+    const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.copy(position);
 
@@ -68,6 +94,87 @@ export class SceneManager {
       id,
       name: `Sphere ${this.objectCounter}`,
       type: 'sphere',
+      mesh,
+    };
+
+    this.objects.set(id, sceneObject);
+    return sceneObject;
+  }
+
+  addCylinder(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
+    const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+    const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(position);
+
+    this.scene.add(mesh);
+
+    const id = `cylinder_${++this.objectCounter}`;
+    const sceneObject: SceneObject = {
+      id,
+      name: `Cylinder ${this.objectCounter}`,
+      type: 'cylinder',
+      mesh,
+    };
+
+    this.objects.set(id, sceneObject);
+    return sceneObject;
+  }
+
+  addCone(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
+    const geometry = new THREE.ConeGeometry(0.5, 1, 32);
+    const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(position);
+
+    this.scene.add(mesh);
+
+    const id = `cone_${++this.objectCounter}`;
+    const sceneObject: SceneObject = {
+      id,
+      name: `Cone ${this.objectCounter}`,
+      type: 'cone',
+      mesh,
+    };
+
+    this.objects.set(id, sceneObject);
+    return sceneObject;
+  }
+
+  addTorus(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
+    const geometry = new THREE.TorusGeometry(0.5, 0.2, 16, 100);
+    const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(position);
+
+    this.scene.add(mesh);
+
+    const id = `torus_${++this.objectCounter}`;
+    const sceneObject: SceneObject = {
+      id,
+      name: `Torus ${this.objectCounter}`,
+      type: 'torus',
+      mesh,
+    };
+
+    this.objects.set(id, sceneObject);
+    return sceneObject;
+  }
+
+  addPlane(position: THREE.Vector3 = new THREE.Vector3(0, 0, 0)): SceneObject {
+    const geometry = new THREE.PlaneGeometry(1, 1);
+    const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor(), side: THREE.DoubleSide });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(position);
+    mesh.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+
+    this.scene.add(mesh);
+
+    const id = `plane_${++this.objectCounter}`;
+    const sceneObject: SceneObject = {
+      id,
+      name: `Plane ${this.objectCounter}`,
+      type: 'plane',
       mesh,
     };
 
