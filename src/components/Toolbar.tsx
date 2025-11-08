@@ -1,20 +1,63 @@
-import { useState } from 'react';
-import { CreateTab } from './toolbar/CreateTab';
-import { EditTab } from './toolbar/EditTab';
-import { MaterialsTab } from './toolbar/MaterialsTab';
-import { RenderTab } from './toolbar/RenderTab';
+import { useState, useMemo } from 'react';
+import { ToolbarButtonComponent } from './toolbar/ToolbarButton';
+import type { TabConfig } from './toolbar/types';
 
 interface ToolbarProps {
   onAddCube: () => void;
   onAddSphere: () => void;
 }
 
-type ToolTab = 'create' | 'edit' | 'materials' | 'render';
-
 export function Toolbar({ onAddCube, onAddSphere }: ToolbarProps) {
-  const [activeTab, setActiveTab] = useState<ToolTab>('create');
+  const [activeTab, setActiveTab] = useState<string>('create');
 
-  const tabStyle = (isActive: boolean) => ({
+  // Define all tabs as configuration objects
+  const tabs: TabConfig[] = useMemo(() => [
+    {
+      id: 'create',
+      label: 'Create',
+      buttons: [
+        {
+          label: 'Add Cube',
+          tooltip: 'Add a cube to the scene',
+          action: onAddCube,
+        },
+        {
+          label: 'Add Sphere',
+          tooltip: 'Add a sphere to the scene',
+          action: onAddSphere,
+        },
+      ],
+    },
+    {
+      id: 'edit',
+      label: 'Edit',
+      buttons: [],
+    },
+    {
+      id: 'materials',
+      label: 'Materials',
+      buttons: [],
+    },
+    {
+      id: 'lighting',
+      label: 'Lighting',
+      buttons: [],
+    },
+    {
+      id: 'animation',
+      label: 'Animation',
+      buttons: [],
+    },
+    {
+      id: 'render',
+      label: 'Render',
+      buttons: [],
+    },
+  ], [onAddCube, onAddSphere]);
+
+  const activeTabConfig = tabs.find(tab => tab.id === activeTab);
+
+  const tabButtonStyle = (isActive: boolean) => ({
     padding: '8px 16px',
     backgroundColor: isActive ? '#0e639c' : '#2a2a2a',
     color: '#fff',
@@ -22,8 +65,12 @@ export function Toolbar({ onAddCube, onAddSphere }: ToolbarProps) {
     borderRadius: '4px 4px 0 0',
     cursor: 'pointer',
     fontSize: '13px',
-    fontWeight: 'bold',
+    fontWeight: 'bold' as const,
     marginRight: '2px',
+    verticalAlign: 'bottom' as const,
+    boxSizing: 'border-box' as const,
+    height: '36px',
+    fontFamily: 'inherit',
   });
 
   return (
@@ -38,70 +85,25 @@ export function Toolbar({ onAddCube, onAddSphere }: ToolbarProps) {
           backgroundColor: '#1a1a1a',
         }}
       >
-        <button
-          onClick={() => setActiveTab('create')}
-          style={tabStyle(activeTab === 'create')}
-          onMouseOver={(e) => {
-            if (activeTab !== 'create') {
-              e.currentTarget.style.backgroundColor = '#3a3a3a';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'create') {
-              e.currentTarget.style.backgroundColor = '#2a2a2a';
-            }
-          }}
-        >
-          Create
-        </button>
-        <button
-          onClick={() => setActiveTab('edit')}
-          style={tabStyle(activeTab === 'edit')}
-          onMouseOver={(e) => {
-            if (activeTab !== 'edit') {
-              e.currentTarget.style.backgroundColor = '#3a3a3a';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'edit') {
-              e.currentTarget.style.backgroundColor = '#2a2a2a';
-            }
-          }}
-        >
-          Edit
-        </button>
-        <button
-          onClick={() => setActiveTab('materials')}
-          style={tabStyle(activeTab === 'materials')}
-          onMouseOver={(e) => {
-            if (activeTab !== 'materials') {
-              e.currentTarget.style.backgroundColor = '#3a3a3a';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'materials') {
-              e.currentTarget.style.backgroundColor = '#2a2a2a';
-            }
-          }}
-        >
-          Materials
-        </button>
-        <button
-          onClick={() => setActiveTab('render')}
-          style={tabStyle(activeTab === 'render')}
-          onMouseOver={(e) => {
-            if (activeTab !== 'render') {
-              e.currentTarget.style.backgroundColor = '#3a3a3a';
-            }
-          }}
-          onMouseOut={(e) => {
-            if (activeTab !== 'render') {
-              e.currentTarget.style.backgroundColor = '#2a2a2a';
-            }
-          }}
-        >
-          Render
-        </button>
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={tabButtonStyle(activeTab === tab.id)}
+            onMouseOver={(e) => {
+              if (activeTab !== tab.id) {
+                e.currentTarget.style.backgroundColor = '#3a3a3a';
+              }
+            }}
+            onMouseOut={(e) => {
+              if (activeTab !== tab.id) {
+                e.currentTarget.style.backgroundColor = '#2a2a2a';
+              }
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
       </div>
 
       {/* Tab Content */}
@@ -114,10 +116,15 @@ export function Toolbar({ onAddCube, onAddSphere }: ToolbarProps) {
           alignItems: 'center',
         }}
       >
-        {activeTab === 'create' && <CreateTab onAddCube={onAddCube} onAddSphere={onAddSphere} />}
-        {activeTab === 'edit' && <EditTab />}
-        {activeTab === 'materials' && <MaterialsTab />}
-        {activeTab === 'render' && <RenderTab />}
+        {activeTabConfig && activeTabConfig.buttons.length > 0 ? (
+          activeTabConfig.buttons.map((button, index) => (
+            <ToolbarButtonComponent key={index} button={button} />
+          ))
+        ) : (
+          <p style={{ color: '#888', fontSize: '12px', margin: 0 }}>
+            {activeTabConfig?.label} tools coming soon...
+          </p>
+        )}
       </div>
     </div>
   );
