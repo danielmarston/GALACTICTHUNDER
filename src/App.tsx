@@ -61,6 +61,7 @@ function App() {
           <ResizableViewportGrid 
             sceneManager={sceneManager} 
             onSelectObject={handleSelectObject}
+            selectedObjectId={selectedObjectId}
           />
         </div>
         <ResizablePanel initialWidth={200} minWidth={150} maxWidth={400} side="right">

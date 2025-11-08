@@ -1,20 +1,23 @@
 import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { ViewportType } from '../types/types';
 import type { SceneManager } from '../scene/SceneManager';
 import { ViewportToolbar } from './ViewportToolbar';
 import type { ViewportDisplayMode } from './ViewportToolbar';
+import { ObjectToolbar } from './ObjectToolbar';
 
 interface ViewportProps {
   type: ViewportType;
   scene: THREE.Scene;
   sceneManager: SceneManager;
   onSelectObject: (id: string | null) => void;
+  selectedObjectId: string | null;
   onMount?: (camera: THREE.Camera, renderer: THREE.WebGLRenderer) => void;
 }
 
-export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }: ViewportProps) {
+export function Viewport({ type, scene, sceneManager, onSelectObject, selectedObjectId, onMount }: ViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.Camera | null>(null);
@@ -23,6 +26,48 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
   const [displayMode, setDisplayMode] = useState<ViewportDisplayMode>('shaded');
   const viewportSceneRef = useRef<THREE.Scene | null>(null);
   const viewportMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
+  const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale' | null>(null);
+  const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
+  const transformControlsRef = useRef<TransformControls | null>(null);
+  const selectedObjectIdRef = useRef<string | null>(null);
+
+  // Keep selectedObjectIdRef in sync
+  useEffect(() => {
+    selectedObjectIdRef.current = selectedObjectId;
+  }, [selectedObjectId]);
+
+  // Calculate toolbar position when object is selected
+  useEffect(() => {
+    if (!selectedObjectId || !containerRef.current || !cameraRef.current) {
+      setToolbarPosition(null);
+      return;
+    }
+
+    const selectedObject = sceneManager.getObjects().find(obj => obj.id === selectedObjectId);
+    if (!selectedObject) {
+      setToolbarPosition(null);
+      return;
+    }
+
+    // Get object's world position
+    const objectPosition = new THREE.Vector3();
+    selectedObject.mesh.getWorldPosition(objectPosition);
+    
+    // Offset position above the object
+    const offsetPosition = objectPosition.clone();
+    offsetPosition.y += 2; // Position above object
+
+    // Project to screen space
+    const camera = cameraRef.current;
+    const container = containerRef.current;
+    const rect = container.getBoundingClientRect();
+    
+    const vector = offsetPosition.clone().project(camera);
+    const x = (vector.x * 0.5 + 0.5) * rect.width;
+    const y = (-(vector.y * 0.5) + 0.5) * rect.height;
+
+    setToolbarPosition({ x, y });
+  }, [selectedObjectId, sceneManager]);
 
   // Update materials when display mode changes
   useEffect(() => {
@@ -66,6 +111,28 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
       }
     });
   }, [displayMode, sceneManager]);
+
+  // Update TransformControls when transform mode or selected object changes
+  useEffect(() => {
+    const transformControls = transformControlsRef.current;
+    if (!transformControls) return;
+
+    if (selectedObjectId && transformMode) {
+      // Attach to the viewport mesh
+      const viewportMesh = viewportMeshesRef.current.get(selectedObjectId);
+      if (viewportMesh) {
+        transformControls.attach(viewportMesh);
+        transformControls.setMode(transformMode);
+        transformControls.enabled = true;
+        transformControls.showX = true;
+        transformControls.showY = true;
+        transformControls.showZ = true;
+      }
+    } else {
+      transformControls.detach();
+      transformControls.enabled = false;
+    }
+  }, [selectedObjectId, transformMode, sceneManager]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -248,6 +315,35 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
     
     controlsRef.current = controls;
 
+    // Add TransformControls for object manipulation
+    const transformControls = new TransformControls(camera, renderer.domElement);
+    transformControls.setSize(0.75); // Make gizmo a bit smaller
+    transformControls.enabled = false; // Start disabled
+    
+    transformControls.addEventListener('dragging-changed', (event) => {
+      // Disable orbit controls while dragging transform gizmo
+      controls.enabled = !event.value;
+    });
+    
+    transformControls.addEventListener('objectChange', () => {
+      // The transform controls are manipulating the viewport mesh
+      // Sync back to the main scene object
+      if (transformControls.object && selectedObjectIdRef.current) {
+        const mainObject = sceneManager.getObjects().find(obj => obj.id === selectedObjectIdRef.current);
+        if (mainObject) {
+          mainObject.mesh.position.copy(transformControls.object.position);
+          mainObject.mesh.rotation.copy(transformControls.object.rotation);
+          mainObject.mesh.scale.copy(transformControls.object.scale);
+          sceneManager.updateOutline();
+        }
+      }
+    });
+    
+    // Add TransformControls helper to the viewport scene
+    // This is the key - we need to add the helper, not the controls itself
+    viewportScene.add(transformControls.getHelper());
+    transformControlsRef.current = transformControls;
+
     // Animation loop
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
@@ -259,6 +355,7 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
         controlsRef.current.update();
       }
       
+      // Render viewport scene
       renderer.render(viewportScene, camera);
     };
     animate();
@@ -378,6 +475,11 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
         controlsRef.current.dispose();
       }
       
+      if (transformControlsRef.current) {
+        transformControlsRef.current.detach();
+        transformControlsRef.current.dispose();
+      }
+      
       // Clean up viewport-specific meshes and materials
       viewportMeshesRef.current.forEach(mesh => {
         if (mesh.material instanceof THREE.Material) {
@@ -391,7 +493,7 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
         rendererRef.current.dispose();
       }
     };
-  }, [type, scene, sceneManager, onSelectObject, onMount, displayMode]);
+  }, [type, scene, sceneManager, onSelectObject, onMount]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -408,6 +510,25 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
         displayMode={displayMode}
         onDisplayModeChange={setDisplayMode}
       />
+      {toolbarPosition && selectedObjectId && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${toolbarPosition.x}px`,
+            top: `${toolbarPosition.y}px`,
+            transform: 'translate(-50%, -100%)',
+            pointerEvents: 'auto',
+            marginTop: '-10px',
+          }}
+        >
+          <ObjectToolbar
+            onTranslate={() => setTransformMode(transformMode === 'translate' ? null : 'translate')}
+            onRotate={() => setTransformMode(transformMode === 'rotate' ? null : 'rotate')}
+            onScale={() => setTransformMode(transformMode === 'scale' ? null : 'scale')}
+            activeMode={transformMode}
+          />
+        </div>
+      )}
       <div
         style={{
           position: 'absolute',

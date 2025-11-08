@@ -4,9 +4,10 @@ import { SceneManager } from '../scene/SceneManager';
 interface ViewportGridProps {
   sceneManager: SceneManager;
   onSelectObject: (id: string | null) => void;
+  selectedObjectId: string | null;
 }
 
-export function ViewportGrid({ sceneManager, onSelectObject }: ViewportGridProps) {
+export function ViewportGrid({ sceneManager, onSelectObject, selectedObjectId }: ViewportGridProps) {
   const scene = sceneManager.getScene();
 
   return (
@@ -21,10 +22,10 @@ export function ViewportGrid({ sceneManager, onSelectObject }: ViewportGridProps
         backgroundColor: '#1a1a1a',
       }}
     >
-      <Viewport type="perspective" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} />
-      <Viewport type="top" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} />
-      <Viewport type="left" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} />
-      <Viewport type="front" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} />
+      <Viewport type="perspective" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
+      <Viewport type="top" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
+      <Viewport type="left" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
+      <Viewport type="front" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
     </div>
   );
 }

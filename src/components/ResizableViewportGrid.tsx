@@ -5,9 +5,10 @@ import type { SceneManager } from '../scene/SceneManager';
 interface ResizableViewportGridProps {
   sceneManager: SceneManager;
   onSelectObject: (id: string | null) => void;
+  selectedObjectId: string | null;
 }
 
-export function ResizableViewportGrid({ sceneManager, onSelectObject }: ResizableViewportGridProps) {
+export function ResizableViewportGrid({ sceneManager, onSelectObject, selectedObjectId }: ResizableViewportGridProps) {
   const scene = sceneManager.getScene();
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef<{ horizontal: boolean; vertical: boolean }>({ horizontal: false, vertical: false });
@@ -84,7 +85,7 @@ export function ResizableViewportGrid({ sceneManager, onSelectObject }: Resizabl
     >
       {/* Top-left: Perspective */}
       <div style={{ gridColumn: '1', gridRow: '1', overflow: 'hidden' }}>
-        <Viewport type="perspective" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} />
+        <Viewport type="perspective" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
       </div>
       
       {/* Vertical splitter (full height) */}
@@ -108,7 +109,7 @@ export function ResizableViewportGrid({ sceneManager, onSelectObject }: Resizabl
       
       {/* Top-right: Top view */}
       <div style={{ gridColumn: '3', gridRow: '1', overflow: 'hidden' }}>
-        <Viewport type="top" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} />
+        <Viewport type="top" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
       </div>
       
       {/* Horizontal splitter left column */}
@@ -151,12 +152,12 @@ export function ResizableViewportGrid({ sceneManager, onSelectObject }: Resizabl
       
       {/* Bottom-left: Left view */}
       <div style={{ gridColumn: '1', gridRow: '3', overflow: 'hidden' }}>
-        <Viewport type="left" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} />
+        <Viewport type="left" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
       </div>
       
       {/* Bottom-right: Front view */}
       <div style={{ gridColumn: '3', gridRow: '3', overflow: 'hidden' }}>
-        <Viewport type="front" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} />
+        <Viewport type="front" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
       </div>
     </div>
   );
