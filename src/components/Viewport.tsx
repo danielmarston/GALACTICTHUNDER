@@ -1,8 +1,10 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { ViewportType } from '../types/types';
 import type { SceneManager } from '../scene/SceneManager';
+import { ViewportToolbar } from './ViewportToolbar';
+import type { ViewportDisplayMode } from './ViewportToolbar';
 
 interface ViewportProps {
   type: ViewportType;
@@ -18,6 +20,52 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
   const cameraRef = useRef<THREE.Camera | null>(null);
   const controlsRef = useRef<OrbitControls | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const [displayMode, setDisplayMode] = useState<ViewportDisplayMode>('shaded');
+  const viewportSceneRef = useRef<THREE.Scene | null>(null);
+  const viewportMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
+
+  // Update materials when display mode changes
+  useEffect(() => {
+    const meshMap = viewportMeshesRef.current;
+    const objects = sceneManager.getObjects();
+    
+    meshMap.forEach((viewportMesh, id) => {
+      const obj = objects.find(o => o.id === id);
+      if (obj) {
+        // Dispose old material
+        if (viewportMesh.material instanceof THREE.Material) {
+          viewportMesh.material.dispose();
+        }
+        
+        // Create new material based on display mode
+        const originalMaterial = obj.mesh.material as THREE.MeshPhongMaterial;
+        const baseColor = originalMaterial.color;
+        
+        let newMaterial: THREE.Material;
+        switch (displayMode) {
+          case 'wireframe':
+            newMaterial = new THREE.MeshBasicMaterial({ 
+              color: baseColor, 
+              wireframe: true 
+            });
+            break;
+          case 'solid':
+            newMaterial = new THREE.MeshBasicMaterial({ 
+              color: baseColor 
+            });
+            break;
+          case 'shaded':
+          default:
+            newMaterial = new THREE.MeshPhongMaterial({ 
+              color: baseColor 
+            });
+            break;
+        }
+        
+        viewportMesh.material = newMaterial;
+      }
+    });
+  }, [displayMode, sceneManager]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -63,6 +111,106 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
 
     cameraRef.current = camera;
 
+    // Create a viewport-specific scene that mirrors the main scene
+    const viewportScene = new THREE.Scene();
+    viewportScene.background = scene.background;
+    
+    // Copy helpers and lights from main scene
+    scene.children.forEach(child => {
+      if (child.type === 'GridHelper' || child.type === 'AxesHelper' || 
+          child.type === 'AmbientLight' || child.type === 'DirectionalLight') {
+        viewportScene.add(child.clone());
+      }
+    });
+    
+    viewportSceneRef.current = viewportScene;
+
+    // Function to sync viewport scene with main scene
+    const syncScene = () => {
+      const objects = sceneManager.getObjects();
+      const meshMap = viewportMeshesRef.current;
+      
+      // Remove meshes that no longer exist
+      const currentIds = new Set(objects.map(obj => obj.id));
+      meshMap.forEach((mesh, id) => {
+        if (!currentIds.has(id)) {
+          viewportScene.remove(mesh);
+          mesh.geometry.dispose();
+          if (mesh.material instanceof THREE.Material) {
+            mesh.material.dispose();
+          }
+          meshMap.delete(id);
+        }
+      });
+      
+      // Add or update meshes
+      objects.forEach(obj => {
+        let viewportMesh = meshMap.get(obj.id);
+        
+        if (!viewportMesh) {
+          // Create new mesh with custom material
+          const geometry = obj.mesh.geometry;
+          let material: THREE.Material;
+          
+          const originalMaterial = obj.mesh.material as THREE.MeshPhongMaterial;
+          const baseColor = originalMaterial.color;
+          
+          switch (displayMode) {
+            case 'wireframe':
+              material = new THREE.MeshBasicMaterial({ 
+                color: baseColor, 
+                wireframe: true 
+              });
+              break;
+            case 'solid':
+              material = new THREE.MeshBasicMaterial({ 
+                color: baseColor 
+              });
+              break;
+            case 'shaded':
+            default:
+              material = new THREE.MeshPhongMaterial({ 
+                color: baseColor 
+              });
+              break;
+          }
+          
+          viewportMesh = new THREE.Mesh(geometry, material);
+          viewportScene.add(viewportMesh);
+          meshMap.set(obj.id, viewportMesh);
+        }
+        
+        // Sync transform
+        viewportMesh.position.copy(obj.mesh.position);
+        viewportMesh.rotation.copy(obj.mesh.rotation);
+        viewportMesh.scale.copy(obj.mesh.scale);
+      });
+      
+      // Sync outline mesh from main scene
+      const outlineMeshes = scene.children.filter(
+        child => child instanceof THREE.Mesh && 
+        child.material instanceof THREE.MeshBasicMaterial &&
+        (child.material as THREE.MeshBasicMaterial).side === THREE.BackSide
+      );
+      
+      // Remove old outline meshes
+      const existingOutlines = viewportScene.children.filter(
+        child => child instanceof THREE.Mesh &&
+        child.material instanceof THREE.MeshBasicMaterial &&
+        (child.material as THREE.MeshBasicMaterial).side === THREE.BackSide
+      );
+      existingOutlines.forEach(outline => viewportScene.remove(outline));
+      
+      // Add current outline meshes
+      outlineMeshes.forEach(outline => {
+        const outlineClone = outline.clone();
+        viewportScene.add(outlineClone);
+      });
+    };
+    
+    // Initial sync
+    syncScene();
+
     // Create renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
@@ -76,31 +224,72 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
     container.appendChild(renderer.domElement);
     rendererRef.current = renderer;
 
-    // Add controls for perspective view
+    // Add controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    
     if (type === 'perspective') {
-      const controls = new OrbitControls(camera, renderer.domElement);
-      controls.enableDamping = true;
-      controls.dampingFactor = 0.05;
-      controlsRef.current = controls;
+      // Perspective: allow rotation, zoom, and pan
+      controls.enableRotate = true;
+      controls.enableZoom = true;
+      controls.enablePan = true;
+    } else {
+      // Orthographic: only pan and zoom, no rotation
+      controls.enableRotate = false;
+      controls.enableZoom = true;
+      controls.enablePan = true;
+      controls.mouseButtons = {
+        LEFT: THREE.MOUSE.PAN,
+        MIDDLE: THREE.MOUSE.DOLLY,
+        RIGHT: THREE.MOUSE.PAN
+      };
     }
+    
+    controlsRef.current = controls;
 
     // Animation loop
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
       
+      // Sync scene objects
+      syncScene();
+      
       if (controlsRef.current) {
         controlsRef.current.update();
       }
       
-      renderer.render(scene, camera);
+      renderer.render(viewportScene, camera);
     };
     animate();
 
     // Handle object selection via raycasting
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
+    let mouseDownPos = { x: 0, y: 0 };
+    let isDragging = false;
+
+    const handleMouseDown = (event: MouseEvent) => {
+      mouseDownPos = { x: event.clientX, y: event.clientY };
+      isDragging = false;
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (mouseDownPos) {
+        const dx = event.clientX - mouseDownPos.x;
+        const dy = event.clientY - mouseDownPos.y;
+        if (Math.sqrt(dx * dx + dy * dy) > 5) {
+          isDragging = true;
+        }
+      }
+    };
 
     const handleClick = (event: MouseEvent) => {
+      // Only process selection if not dragging
+      if (isDragging) {
+        return;
+      }
+
       const rect = container.getBoundingClientRect();
       
       // Calculate mouse position in normalized device coordinates (-1 to +1)
@@ -131,6 +320,8 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
       }
     };
 
+    container.addEventListener('mousedown', handleMouseDown);
+    container.addEventListener('mousemove', handleMouseMove);
     container.addEventListener('click', handleClick);
 
     // Notify parent of mount
@@ -175,6 +366,8 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
     return () => {
       resizeObserver.disconnect();
       window.removeEventListener('resize', handleResize);
+      container.removeEventListener('mousedown', handleMouseDown);
+      container.removeEventListener('mousemove', handleMouseMove);
       container.removeEventListener('click', handleClick);
       
       if (animationFrameRef.current !== null) {
@@ -185,12 +378,20 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
         controlsRef.current.dispose();
       }
       
+      // Clean up viewport-specific meshes and materials
+      viewportMeshesRef.current.forEach(mesh => {
+        if (mesh.material instanceof THREE.Material) {
+          mesh.material.dispose();
+        }
+      });
+      viewportMeshesRef.current.clear();
+      
       if (rendererRef.current) {
         container.removeChild(rendererRef.current.domElement);
         rendererRef.current.dispose();
       }
     };
-  }, [type, scene, sceneManager, onSelectObject, onMount]);
+  }, [type, scene, sceneManager, onSelectObject, onMount, displayMode]);
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>
@@ -203,11 +404,15 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, onMount }:
           boxSizing: 'border-box',
         }}
       />
+      <ViewportToolbar 
+        displayMode={displayMode}
+        onDisplayModeChange={setDisplayMode}
+      />
       <div
         style={{
           position: 'absolute',
           top: '8px',
-          left: '8px',
+          right: '8px',
           color: '#fff',
           fontSize: '12px',
           fontWeight: 'bold',
