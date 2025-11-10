@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { ResizableViewportGrid } from './components/ResizableViewportGrid';
 import { Toolbar } from './components/Toolbar';
 import { SceneHierarchy } from './components/SceneHierarchy';
@@ -6,9 +6,24 @@ import { ParametersPanel } from './components/ParametersPanel';
 import { ResizablePanel } from './components/ResizablePanel';
 import { RenderModal } from './components/RenderModal';
 import { RenderSettingsModal, type RenderSettings } from './components/RenderSettingsModal';
+import { getCreationInstructions } from './components/CreationMode';
 import { SceneManager } from './scene/SceneManager';
-import type { SceneObject } from './types/types';
+import type { SceneObject, ObjectType } from './types/types';
+import type { CreationState } from './types/creationMode';
 import './App.css';
+
+function getStepCount(objectType: ObjectType | null): number {
+  if (!objectType) return 0;
+  const stepCounts: Record<ObjectType, number> = {
+    cube: 3,
+    sphere: 2,
+    cylinder: 3,
+    cone: 3,
+    torus: 3,
+    plane: 2,
+  };
+  return stepCounts[objectType];
+}
 
 function App() {
   const [sceneManager] = useState(() => new SceneManager());
@@ -16,6 +31,13 @@ function App() {
   const [selectedObjectId, setSelectedObjectId] = useState<string | null>(null);
   const [isRenderModalOpen, setIsRenderModalOpen] = useState(false);
   const [isRenderSettingsOpen, setIsRenderSettingsOpen] = useState(false);
+  const [creationState, setCreationState] = useState<CreationState>({
+    isActive: false,
+    objectType: null,
+    currentStep: 0,
+    points: [],
+    previewMesh: null,
+  });
   const [renderSettings, setRenderSettings] = useState<RenderSettings>({
     samples: 250,
     bounces: 5,
@@ -31,34 +53,56 @@ function App() {
     setObjects(sceneManager.getObjects());
   }, [sceneManager]);
 
+  // Handle Escape key to cancel creation mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && creationState.isActive) {
+        setCreationState({
+          isActive: false,
+          objectType: null,
+          currentStep: 0,
+          points: [],
+          previewMesh: null,
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [creationState.isActive]);
+
+  const startCreationMode = (objectType: ObjectType) => {
+    setCreationState({
+      isActive: true,
+      objectType,
+      currentStep: 0,
+      points: [],
+      previewMesh: null,
+    });
+  };
+
   const handleAddCube = () => {
-    sceneManager.addCube();
-    setObjects(sceneManager.getObjects());
+    startCreationMode('cube');
   };
 
   const handleAddSphere = () => {
-    sceneManager.addSphere();
-    setObjects(sceneManager.getObjects());
+    startCreationMode('sphere');
   };
 
   const handleAddCylinder = () => {
-    sceneManager.addCylinder();
-    setObjects(sceneManager.getObjects());
+    startCreationMode('cylinder');
   };
 
   const handleAddCone = () => {
-    sceneManager.addCone();
-    setObjects(sceneManager.getObjects());
+    startCreationMode('cone');
   };
 
   const handleAddTorus = () => {
-    sceneManager.addTorus();
-    setObjects(sceneManager.getObjects());
+    startCreationMode('torus');
   };
 
   const handleAddPlane = () => {
-    sceneManager.addPlane();
-    setObjects(sceneManager.getObjects());
+    startCreationMode('plane');
   };
 
   const handleDeleteObject = (id: string) => {
@@ -70,10 +114,14 @@ function App() {
     setObjects(sceneManager.getObjects());
   };
 
-  const handleSelectObject = (id: string | null) => {
+  const handleSelectObject = useCallback((id: string | null) => {
     setSelectedObjectId(id);
     sceneManager.setSelectedObject(id);
-  };
+  }, [sceneManager]);
+
+  const handleObjectCreated = useCallback(() => {
+    setObjects(sceneManager.getObjects());
+  }, [sceneManager]);
 
   const handleUpdatePosition = () => {
     // Update outline to match transformed object
@@ -95,15 +143,62 @@ function App() {
         onAddCone={handleAddCone}
         onAddTorus={handleAddTorus}
         onAddPlane={handleAddPlane}
-        onRender={() => setIsRenderModalOpen(true)}
+        onRender={() => {
+          setIsRenderModalOpen(true);
+        }}
         onRenderSettings={() => setIsRenderSettingsOpen(true)}
       />
+      {creationState.isActive && (
+        <div style={{
+          padding: '8px 16px',
+          backgroundColor: '#0e639c',
+          color: '#ffffff',
+          fontSize: '13px',
+          borderBottom: '1px solid #0a4a7a',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}>
+          <div>
+            <strong>Creating {creationState.objectType}:</strong>
+            {' '}
+            {creationState.objectType && getCreationInstructions(creationState.objectType, creationState.currentStep)}
+            {' '}
+            <span style={{ opacity: 0.8 }}>
+              (Step {creationState.currentStep + 1} of {getStepCount(creationState.objectType)})
+            </span>
+          </div>
+          <button
+            onClick={() => setCreationState({
+              isActive: false,
+              objectType: null,
+              currentStep: 0,
+              points: [],
+              previewMesh: null,
+            })}
+            style={{
+              padding: '4px 12px',
+              backgroundColor: 'transparent',
+              border: '1px solid #ffffff',
+              borderRadius: '3px',
+              color: '#ffffff',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            Cancel (Esc)
+          </button>
+        </div>
+      )}
       <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <ResizableViewportGrid 
             sceneManager={sceneManager} 
             onSelectObject={handleSelectObject}
             selectedObjectId={selectedObjectId}
+            creationState={creationState}
+            onCreationStateChange={setCreationState}
+            onObjectCreated={handleObjectCreated}
           />
         </div>
         <ResizablePanel initialWidth={200} minWidth={150} maxWidth={400} side="right">

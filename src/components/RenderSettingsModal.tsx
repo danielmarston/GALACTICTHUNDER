@@ -87,7 +87,7 @@ export function RenderSettingsModal({ isOpen, onClose, settings, onSave }: Rende
               }}
             />
             <small style={{ color: '#858585', fontSize: '11px' }}>
-              Number of samples per pixel (higher = better quality, slower)
+              Number of samples per pixel (1-10000, higher = better quality, slower)
             </small>
           </div>
 
@@ -118,7 +118,7 @@ export function RenderSettingsModal({ isOpen, onClose, settings, onSave }: Rende
               }}
             />
             <small style={{ color: '#858585', fontSize: '11px' }}>
-              Maximum number of light bounces
+              Maximum number of light bounces (1-50)
             </small>
           </div>
 
@@ -149,7 +149,7 @@ export function RenderSettingsModal({ isOpen, onClose, settings, onSave }: Rende
               }}
             />
             <small style={{ color: '#858585', fontSize: '11px' }}>
-              Maximum number of transmissive (glass/transparent) bounces
+              Maximum number of transmissive (glass/transparent) bounces (1-50)
             </small>
           </div>
 
@@ -199,7 +199,7 @@ export function RenderSettingsModal({ isOpen, onClose, settings, onSave }: Rende
               />
             </div>
             <small style={{ color: '#858585', fontSize: '11px' }}>
-              Number of tiles to divide the render into (lower = faster progress, higher = better performance)
+              Number of tiles to divide the render into (1-8, lower = faster progress, higher = better performance)
             </small>
           </div>
 
@@ -249,7 +249,7 @@ export function RenderSettingsModal({ isOpen, onClose, settings, onSave }: Rende
               />
             </div>
             <small style={{ color: '#858585', fontSize: '11px' }}>
-              Output image resolution in pixels (Width × Height)
+              Output image resolution in pixels (100-4096 for both width and height)
             </small>
           </div>
         </div>

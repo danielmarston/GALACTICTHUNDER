@@ -83,12 +83,14 @@ export function RenderModal({ isOpen, onClose, sceneManager, settings }: RenderM
 
   // Update scene when modal opens or sceneManager changes
   useEffect(() => {
+    console.log('[RenderModal] useEffect triggered, isOpen:', isOpen);
+    
     if (!isOpen || !pathTracerRef.current) {
       return;
     }
 
     const pathTracer = pathTracerRef.current;
-    const scene = sceneManager.getScene();
+    const originalScene = sceneManager.getScene();
     
     // Use the perspective camera from the viewport
     const perspectiveCamera = sceneManager.getPerspectiveCamera();
@@ -98,7 +100,29 @@ export function RenderModal({ isOpen, onClose, sceneManager, settings }: RenderM
       return;
     }
     
+    // Create a render scene that includes all objects and lights
+    const renderScene = new THREE.Scene();
+    renderScene.background = originalScene.background;
+    
+    // Clone all scene objects (but NOT the camera or outline meshes)
+    originalScene.children.forEach(child => {
+      // Skip cameras to avoid any interference
+      if (child instanceof THREE.Camera) {
+        return;
+      }
+      
+      // Skip outline meshes (they have BackSide material and are used for selection highlighting)
+      if (child instanceof THREE.Mesh && 
+          child.material instanceof THREE.MeshBasicMaterial &&
+          child.material.side === THREE.BackSide) {
+        return;
+      }
+      
+      renderScene.add(child.clone(true));
+    });
+    
     // Create a new camera with the same properties as the perspective camera
+    // Use world position/rotation to ensure we capture the current view accurately
     const camera = new THREE.PerspectiveCamera(
       perspectiveCamera.fov,
       settings.resolutionWidth / settings.resolutionHeight,
@@ -106,15 +130,27 @@ export function RenderModal({ isOpen, onClose, sceneManager, settings }: RenderM
       perspectiveCamera.far
     );
     
-    // Copy position, rotation, and other properties
-    camera.position.copy(perspectiveCamera.position);
-    camera.rotation.copy(perspectiveCamera.rotation);
-    camera.quaternion.copy(perspectiveCamera.quaternion);
+    // Update world matrix of original camera first
+    perspectiveCamera.updateMatrixWorld(true);
+    
+    // Copy world position and rotation
+    camera.position.copy(perspectiveCamera.getWorldPosition(new THREE.Vector3()));
+    camera.quaternion.copy(perspectiveCamera.getWorldQuaternion(new THREE.Quaternion()));
     camera.up.copy(perspectiveCamera.up);
-    camera.updateMatrixWorld();
+    
+    // Copy any child objects (like lights) from the original camera
+    perspectiveCamera.children.forEach(child => {
+      const clonedChild = child.clone(true);
+      camera.add(clonedChild);
+    });
+    
+    camera.updateMatrixWorld(true);
     camera.updateProjectionMatrix();
     
-    pathTracer.setScene(scene, camera);
+    // Add camera to render scene so its lights are included
+    renderScene.add(camera);
+    
+    pathTracer.setScene(renderScene, camera);
     pathTracer.reset();
     pathTracer.renderToCanvas = true;
     

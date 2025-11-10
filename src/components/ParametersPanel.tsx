@@ -75,6 +75,32 @@ export function ParametersPanel({ selectedObject, onUpdateTransform }: Parameter
 
       <div style={{ marginBottom: '16px' }}>
         <h4 style={{ color: '#aaa', fontSize: '12px', marginBottom: '8px', marginTop: 0 }}>
+          Material
+        </h4>
+        <div style={{ marginBottom: '8px' }}>
+          <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Color</div>
+          <input
+            type="color"
+            value={`#${(selectedObject.mesh.material as any).color.getHexString()}`}
+            onChange={(e) => {
+              (selectedObject.mesh.material as any).color.setStyle(e.target.value);
+              onUpdateTransform?.();
+            }}
+            style={{
+              width: '100%',
+              height: '32px',
+              padding: '2px',
+              backgroundColor: '#2a2a2a',
+              border: '1px solid #444',
+              borderRadius: '3px',
+              cursor: 'pointer',
+            }}
+          />
+        </div>
+      </div>
+
+      <div style={{ marginBottom: '16px' }}>
+        <h4 style={{ color: '#aaa', fontSize: '12px', marginBottom: '8px', marginTop: 0 }}>
           Transform
         </h4>
         

@@ -1,20 +1,38 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
 import { Viewport } from './Viewport';
 import type { SceneManager } from '../scene/SceneManager';
+import type { CreationState } from '../types/creationMode';
 
 interface ResizableViewportGridProps {
   sceneManager: SceneManager;
   onSelectObject: (id: string | null) => void;
   selectedObjectId: string | null;
+  creationState: CreationState;
+  onCreationStateChange: (state: CreationState) => void;
+  onObjectCreated?: () => void;
 }
 
-export function ResizableViewportGrid({ sceneManager, onSelectObject, selectedObjectId }: ResizableViewportGridProps) {
+export function ResizableViewportGrid({ 
+  sceneManager, 
+  onSelectObject, 
+  selectedObjectId,
+  creationState,
+  onCreationStateChange,
+  onObjectCreated
+}: ResizableViewportGridProps) {
   const scene = sceneManager.getScene();
   const containerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef<{ horizontal: boolean; vertical: boolean }>({ horizontal: false, vertical: false });
   const horizontalSplitRef = useRef(50); // percentage
   const verticalSplitRef = useRef(50); // percentage
+
+  // Memoize the onMount callback so it doesn't change on every render
+  const handlePerspectiveCameraMount = useCallback((camera: THREE.Camera) => {
+    if (camera.type === 'PerspectiveCamera') {
+      sceneManager.setPerspectiveCamera(camera as THREE.PerspectiveCamera);
+    }
+  }, [sceneManager]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -92,11 +110,10 @@ export function ResizableViewportGrid({ sceneManager, onSelectObject, selectedOb
           sceneManager={sceneManager} 
           onSelectObject={onSelectObject} 
           selectedObjectId={selectedObjectId}
-          onMount={(camera) => {
-            if (camera.type === 'PerspectiveCamera') {
-              sceneManager.setPerspectiveCamera(camera as THREE.PerspectiveCamera);
-            }
-          }}
+          creationState={creationState}
+          onCreationStateChange={onCreationStateChange}
+          onMount={handlePerspectiveCameraMount}
+          onObjectCreated={onObjectCreated}
         />
       </div>
       
@@ -121,7 +138,7 @@ export function ResizableViewportGrid({ sceneManager, onSelectObject, selectedOb
       
       {/* Top-right: Top view */}
       <div style={{ gridColumn: '3', gridRow: '1', overflow: 'hidden' }}>
-        <Viewport type="top" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
+        <Viewport type="top" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} creationState={creationState} onCreationStateChange={onCreationStateChange} onObjectCreated={onObjectCreated} />
       </div>
       
       {/* Horizontal splitter left column */}
@@ -164,12 +181,12 @@ export function ResizableViewportGrid({ sceneManager, onSelectObject, selectedOb
       
       {/* Bottom-left: Left view */}
       <div style={{ gridColumn: '1', gridRow: '3', overflow: 'hidden' }}>
-        <Viewport type="left" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
+        <Viewport type="left" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} creationState={creationState} onCreationStateChange={onCreationStateChange} onObjectCreated={onObjectCreated} />
       </div>
       
       {/* Bottom-right: Front view */}
       <div style={{ gridColumn: '3', gridRow: '3', overflow: 'hidden' }}>
-        <Viewport type="front" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
+        <Viewport type="front" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} creationState={creationState} onCreationStateChange={onCreationStateChange} onObjectCreated={onObjectCreated} />
       </div>
     </div>
   );

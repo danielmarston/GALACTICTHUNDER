@@ -1,13 +1,22 @@
 import { Viewport } from './Viewport';
 import { SceneManager } from '../scene/SceneManager';
+import type { CreationState } from '../types/creationMode';
 
 interface ViewportGridProps {
   sceneManager: SceneManager;
   onSelectObject: (id: string | null) => void;
   selectedObjectId: string | null;
+  creationState: CreationState;
+  onCreationStateChange: (state: CreationState) => void;
 }
 
-export function ViewportGrid({ sceneManager, onSelectObject, selectedObjectId }: ViewportGridProps) {
+export function ViewportGrid({ 
+  sceneManager, 
+  onSelectObject, 
+  selectedObjectId,
+  creationState,
+  onCreationStateChange 
+}: ViewportGridProps) {
   const scene = sceneManager.getScene();
 
   return (
@@ -22,10 +31,10 @@ export function ViewportGrid({ sceneManager, onSelectObject, selectedObjectId }:
         backgroundColor: '#1a1a1a',
       }}
     >
-      <Viewport type="perspective" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
-      <Viewport type="top" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
-      <Viewport type="left" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
-      <Viewport type="front" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} />
+      <Viewport type="perspective" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} creationState={creationState} onCreationStateChange={onCreationStateChange} />
+      <Viewport type="top" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} creationState={creationState} onCreationStateChange={onCreationStateChange} />
+      <Viewport type="left" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} creationState={creationState} onCreationStateChange={onCreationStateChange} />
+      <Viewport type="front" scene={scene} sceneManager={sceneManager} onSelectObject={onSelectObject} selectedObjectId={selectedObjectId} creationState={creationState} onCreationStateChange={onCreationStateChange} />
     </div>
   );
 }

@@ -4,6 +4,9 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import type { ViewportType } from '../types/types';
 import type { SceneManager } from '../scene/SceneManager';
+import type { CreationState } from '../types/creationMode';
+import { CREATION_CONFIGS } from '../types/creationMode';
+import { generatePreviewGeometry } from '../components/CreationMode';
 import { ViewportToolbar } from './ViewportToolbar';
 import type { ViewportDisplayMode } from './ViewportToolbar';
 import { ObjectToolbar } from './ObjectToolbar';
@@ -14,10 +17,23 @@ interface ViewportProps {
   sceneManager: SceneManager;
   onSelectObject: (id: string | null) => void;
   selectedObjectId: string | null;
+  creationState: CreationState;
+  onCreationStateChange: (state: CreationState) => void;
   onMount?: (camera: THREE.Camera, renderer: THREE.WebGLRenderer) => void;
+  onObjectCreated?: () => void;
 }
 
-export function Viewport({ type, scene, sceneManager, onSelectObject, selectedObjectId, onMount }: ViewportProps) {
+export function Viewport({ 
+  type, 
+  scene, 
+  sceneManager, 
+  onSelectObject, 
+  selectedObjectId,
+  creationState,
+  onCreationStateChange,
+  onMount,
+  onObjectCreated
+}: ViewportProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const cameraRef = useRef<THREE.Camera | null>(null);
@@ -30,6 +46,16 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, selectedOb
   const [toolbarPosition, setToolbarPosition] = useState<{ x: number; y: number } | null>(null);
   const transformControlsRef = useRef<TransformControls | null>(null);
   const selectedObjectIdRef = useRef<string | null>(null);
+  const previewMeshRef = useRef<THREE.Mesh | null>(null);
+  const currentMousePositionRef = useRef<THREE.Vector3 | null>(null);
+  const creationStateRef = useRef<CreationState>(creationState);
+  const onCreationStateChangeRef = useRef(onCreationStateChange);
+
+  // Keep refs in sync with props
+  useEffect(() => {
+    creationStateRef.current = creationState;
+    onCreationStateChangeRef.current = onCreationStateChange;
+  }, [creationState, onCreationStateChange]);
 
   // Keep selectedObjectIdRef in sync
   useEffect(() => {
@@ -181,14 +207,33 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, selectedOb
     // Create a viewport-specific scene that mirrors the main scene
     const viewportScene = new THREE.Scene();
     viewportScene.background = scene.background;
+
+    // Add perspective camera to viewport scene so lights attached to it work
+    if (type === 'perspective') {
+      viewportScene.add(camera);
+    }
     
-    // Copy helpers and lights from main scene
+    // Copy helpers from main scene
     scene.children.forEach(child => {
-      if (child.type === 'GridHelper' || child.type === 'AxesHelper' || 
-          child.type === 'AmbientLight' || child.type === 'DirectionalLight') {
+      if (child.type === 'GridHelper' || child.type === 'AxesHelper') {
         viewportScene.add(child.clone());
       }
     });
+
+    // Add default lighting for non-perspective viewports (orthographic views)
+    if (type !== 'perspective') {
+      // For ortho views, add simple directional lighting
+      const orthoAmbient = new THREE.AmbientLight(0xffffff, 0.5);
+      viewportScene.add(orthoAmbient);
+      
+      const orthoLight1 = new THREE.DirectionalLight(0xffffff, 0.7);
+      orthoLight1.position.set(5, 10, 7);
+      viewportScene.add(orthoLight1);
+      
+      const orthoLight2 = new THREE.DirectionalLight(0xffffff, 0.4);
+      orthoLight2.position.set(-5, 5, -5);
+      viewportScene.add(orthoLight2);
+    }
     
     viewportSceneRef.current = viewportScene;
 
@@ -251,6 +296,12 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, selectedOb
         viewportMesh.position.copy(obj.mesh.position);
         viewportMesh.rotation.copy(obj.mesh.rotation);
         viewportMesh.scale.copy(obj.mesh.scale);
+        
+        // Sync material color
+        const originalMaterial = obj.mesh.material as THREE.MeshPhongMaterial;
+        if (viewportMesh.material instanceof THREE.Material && 'color' in viewportMesh.material) {
+          (viewportMesh.material as any).color.copy(originalMaterial.color);
+        }
       });
       
       // Sync outline mesh from main scene
@@ -273,6 +324,47 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, selectedOb
         const outlineClone = outline.clone();
         viewportScene.add(outlineClone);
       });
+
+      // Handle creation mode preview mesh
+      if (creationStateRef.current.isActive && creationStateRef.current.objectType && currentMousePositionRef.current) {
+        const geometry = generatePreviewGeometry(
+          creationStateRef.current.objectType,
+          creationStateRef.current.points,
+          currentMousePositionRef.current
+        );
+
+        if (geometry) {
+          // Remove old preview mesh
+          if (previewMeshRef.current) {
+            viewportScene.remove(previewMeshRef.current);
+            previewMeshRef.current.geometry.dispose();
+            if (previewMeshRef.current.material instanceof THREE.Material) {
+              previewMeshRef.current.material.dispose();
+            }
+          }
+
+          // Create new preview mesh with semi-transparent material
+          const material = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.5,
+          });
+          const previewMesh = new THREE.Mesh(geometry, material);
+          viewportScene.add(previewMesh);
+          previewMeshRef.current = previewMesh;
+        }
+      } else {
+        // Not in creation mode - remove preview mesh if it exists
+        if (previewMeshRef.current) {
+          viewportScene.remove(previewMeshRef.current);
+          previewMeshRef.current.geometry.dispose();
+          if (previewMeshRef.current.material instanceof THREE.Material) {
+            previewMeshRef.current.material.dispose();
+          }
+          previewMeshRef.current = null;
+        }
+      }
     };
     
     // Initial sync
@@ -384,10 +476,49 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, selectedOb
           isDragging = true;
         }
       }
+
+      // Update mouse position for creation mode preview
+      if (creationStateRef.current.isActive && creationStateRef.current.objectType) {
+        const rect = container.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        raycaster.setFromCamera(mouse, camera);
+        
+        // Determine if we're on a height step (step 3 for cube, cylinder, cone)
+        const isHeightStep = 
+          (creationStateRef.current.objectType === 'cube' && creationStateRef.current.currentStep === 2) ||
+          (creationStateRef.current.objectType === 'cylinder' && creationStateRef.current.currentStep === 2) ||
+          (creationStateRef.current.objectType === 'cone' && creationStateRef.current.currentStep === 2);
+
+        if (isHeightStep && creationStateRef.current.points.length >= 2) {
+          // For height steps, use the base center point and calculate height from mouse Y movement
+          const basePoint = creationStateRef.current.points[0];
+          // Map screen Y position to height (mouse.y ranges from -1 to 1)
+          // Moving mouse up (positive mouse.y) increases height
+          const heightMultiplier = 5; // Adjust sensitivity
+          const height = Math.max(0.1, mouse.y * heightMultiplier + 2); // Ensure minimum height
+          
+          currentMousePositionRef.current = new THREE.Vector3(
+            basePoint.x,
+            basePoint.y + height,
+            basePoint.z
+          );
+        } else {
+          // For other steps, raycast to ground plane to get 3D position
+          const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+          const intersectionPoint = new THREE.Vector3();
+          raycaster.ray.intersectPlane(groundPlane, intersectionPoint);
+
+          if (intersectionPoint) {
+            currentMousePositionRef.current = intersectionPoint;
+          }
+        }
+      }
     };
 
     const handleClick = (event: MouseEvent) => {
-      // Only process selection if not dragging
+      // Only process if not dragging
       if (isDragging) {
         return;
       }
@@ -401,20 +532,195 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, selectedOb
       // Update the raycaster
       raycaster.setFromCamera(mouse, camera);
 
-      // Get all scene objects
-      const objects = sceneManager.getObjects();
-      const meshes = objects.map(obj => obj.mesh);
+      // If in creation mode, add a point
+      if (creationStateRef.current.isActive && creationStateRef.current.objectType) {
+        // Determine if we're on a height step (step 3 for cube, cylinder, cone)
+        const isHeightStep = 
+          (creationStateRef.current.objectType === 'cube' && creationStateRef.current.currentStep === 2) ||
+          (creationStateRef.current.objectType === 'cylinder' && creationStateRef.current.currentStep === 2) ||
+          (creationStateRef.current.objectType === 'cone' && creationStateRef.current.currentStep === 2);
+
+        let intersectionPoint: THREE.Vector3 | null = null;
+
+        if (isHeightStep && creationStateRef.current.points.length >= 2) {
+          // For height steps, use mouse Y position to determine height
+          const basePoint = creationStateRef.current.points[0];
+          const heightMultiplier = 5;
+          const height = Math.max(0.1, mouse.y * heightMultiplier + 2);
+          
+          intersectionPoint = new THREE.Vector3(
+            basePoint.x,
+            basePoint.y + height,
+            basePoint.z
+          );
+        } else {
+          // For other steps, raycast to ground plane
+          const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+          intersectionPoint = new THREE.Vector3();
+          raycaster.ray.intersectPlane(groundPlane, intersectionPoint);
+        }
+
+        if (intersectionPoint) {
+          const newPoints = [...creationStateRef.current.points, { x: intersectionPoint.x, y: intersectionPoint.y, z: intersectionPoint.z }];
+          const nextStep = creationStateRef.current.currentStep + 1;
+
+          // Check if creation is complete
+          const config = CREATION_CONFIGS[creationStateRef.current.objectType];
+
+          if (nextStep >= config.steps) {
+            // Creation complete - finalize object
+            const objectType = creationStateRef.current.objectType;
+            const points = newPoints;
+            
+            // Calculate center position and scale based on points
+            let createdObject: any;
+            
+            switch (objectType) {
+              case 'cube': {
+                // Points: [corner1, corner2, heightPoint]
+                const p1 = new THREE.Vector3(points[0].x, points[0].y, points[0].z);
+                const p2 = new THREE.Vector3(points[1].x, points[1].y, points[1].z);
+                const p3 = new THREE.Vector3(points[2].x, points[2].y, points[2].z);
+                
+                const width = Math.abs(p2.x - p1.x);
+                const depth = Math.abs(p2.z - p1.z);
+                const height = Math.abs(p3.y - p1.y);
+                
+                const centerX = (p1.x + p2.x) / 2;
+                const centerZ = (p1.z + p2.z) / 2;
+                const centerY = p1.y + height / 2;
+                
+                createdObject = sceneManager.addCube(new THREE.Vector3(centerX, centerY, centerZ));
+                createdObject.mesh.scale.set(width, height, depth);
+                break;
+              }
+              case 'sphere': {
+                // Points: [center, radiusPoint]
+                const center = new THREE.Vector3(points[0].x, points[0].y, points[0].z);
+                const radiusPoint = new THREE.Vector3(points[1].x, points[1].y, points[1].z);
+                const radius = center.distanceTo(radiusPoint);
+                
+                createdObject = sceneManager.addSphere(center);
+                createdObject.mesh.scale.setScalar(radius);
+                break;
+              }
+              case 'cylinder': {
+                // Points: [center, radiusPoint, heightPoint]
+                const center = new THREE.Vector3(points[0].x, points[0].y, points[0].z);
+                const radiusPoint = new THREE.Vector3(points[1].x, points[1].y, points[1].z);
+                const heightPoint = new THREE.Vector3(points[2].x, points[2].y, points[2].z);
+                
+                const radius = Math.sqrt(
+                  Math.pow(radiusPoint.x - center.x, 2) +
+                  Math.pow(radiusPoint.z - center.z, 2)
+                );
+                const height = Math.abs(heightPoint.y - center.y);
+                
+                const finalCenter = new THREE.Vector3(center.x, center.y + height / 2, center.z);
+                createdObject = sceneManager.addCylinder(finalCenter);
+                createdObject.mesh.scale.set(radius, height, radius);
+                break;
+              }
+              case 'cone': {
+                // Points: [center, radiusPoint, heightPoint]
+                const center = new THREE.Vector3(points[0].x, points[0].y, points[0].z);
+                const radiusPoint = new THREE.Vector3(points[1].x, points[1].y, points[1].z);
+                const heightPoint = new THREE.Vector3(points[2].x, points[2].y, points[2].z);
+                
+                const radius = Math.sqrt(
+                  Math.pow(radiusPoint.x - center.x, 2) +
+                  Math.pow(radiusPoint.z - center.z, 2)
+                );
+                const height = Math.abs(heightPoint.y - center.y);
+                
+                const finalCenter = new THREE.Vector3(center.x, center.y + height / 2, center.z);
+                createdObject = sceneManager.addCone(finalCenter);
+                createdObject.mesh.scale.set(radius, height, radius);
+                break;
+              }
+              case 'torus': {
+                // Points: [center, majorRadiusPoint, minorRadiusPoint]
+                const center = new THREE.Vector3(points[0].x, points[0].y, points[0].z);
+                const majorPoint = new THREE.Vector3(points[1].x, points[1].y, points[1].z);
+                
+                const majorRadius = Math.sqrt(
+                  Math.pow(majorPoint.x - center.x, 2) +
+                  Math.pow(majorPoint.z - center.z, 2)
+                );
+                // TODO: Properly calculate and apply minor radius
+                // const minorPoint = new THREE.Vector3(points[2].x, points[2].y, points[2].z);
+                // const minorRadius = ...
+                
+                createdObject = sceneManager.addTorus(center);
+                createdObject.mesh.scale.set(majorRadius / 0.5, majorRadius / 0.5, majorRadius / 0.5);
+                // Note: Torus scaling is complex, this is a simplified version
+                break;
+              }
+              case 'plane': {
+                // Points: [corner1, corner2]
+                const p1 = new THREE.Vector3(points[0].x, points[0].y, points[0].z);
+                const p2 = new THREE.Vector3(points[1].x, points[1].y, points[1].z);
+                
+                const width = Math.abs(p2.x - p1.x);
+                const depth = Math.abs(p2.z - p1.z);
+                
+                const centerX = (p1.x + p2.x) / 2;
+                const centerZ = (p1.z + p2.z) / 2;
+                
+                createdObject = sceneManager.addPlane(new THREE.Vector3(centerX, 0, centerZ));
+                createdObject.mesh.scale.set(width, 1, depth);
+                break;
+              }
+            }
+
+            // Notify parent that an object was created
+            if (onObjectCreated) {
+              onObjectCreated();
+            }
+
+            // Exit creation mode
+            onCreationStateChangeRef.current({
+              isActive: false,
+              objectType: null,
+              currentStep: 0,
+              points: [],
+              previewMesh: null,
+            });
+          } else {
+            // Continue to next step
+            onCreationStateChangeRef.current({
+              ...creationStateRef.current,
+              currentStep: nextStep,
+              points: newPoints,
+            });
+          }
+        }
+        return;
+      }
+
+      // Normal selection mode
+      // Get viewport meshes (not main scene meshes)
+      const meshMap = viewportMeshesRef.current;
+      const viewportMeshes = Array.from(meshMap.values());
 
       // Calculate intersections
-      const intersects = raycaster.intersectObjects(meshes, false);
+      const intersects = raycaster.intersectObjects(viewportMeshes, false);
 
       if (intersects.length > 0) {
-        // Find which object was clicked
+        // Find which object was clicked by matching the mesh
         const clickedMesh = intersects[0].object;
-        const clickedObject = objects.find(obj => obj.mesh === clickedMesh);
         
-        if (clickedObject) {
-          onSelectObject(clickedObject.id);
+        // Find the object ID by looking up which ID maps to this mesh
+        let clickedObjectId: string | null = null;
+        for (const [id, mesh] of meshMap.entries()) {
+          if (mesh === clickedMesh) {
+            clickedObjectId = id;
+            break;
+          }
+        }
+        
+        if (clickedObjectId) {
+          onSelectObject(clickedObjectId);
         }
       } else {
         // Clicked on background, deselect
@@ -498,7 +804,11 @@ export function Viewport({ type, scene, sceneManager, onSelectObject, selectedOb
         rendererRef.current.dispose();
       }
     };
-  }, [type, scene, sceneManager, onSelectObject, onMount]);
+  }, [type, sceneManager, onSelectObject, onMount]);
+  
+  // Note: creationState and onCreationStateChange are intentionally NOT in dependencies
+  // because they change frequently and we don't want to recreate the entire viewport
+  // They are used in event handlers which always have access to current values
 
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%' }}>

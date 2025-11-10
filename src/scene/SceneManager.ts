@@ -8,6 +8,8 @@ export class SceneManager {
   private selectedObjectId: string | null = null;
   private outlineMesh: THREE.Mesh | null = null;
   private perspectiveCamera: THREE.PerspectiveCamera | null = null;
+  private defaultLights: THREE.Group | null = null;
+  private hasUserLights: boolean = false;
 
   constructor() {
     this.scene = new THREE.Scene();
@@ -23,13 +25,40 @@ export class SceneManager {
     const axesHelper = new THREE.AxesHelper(5);
     this.scene.add(axesHelper);
 
-    // Add lights
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    this.scene.add(ambientLight);
+    // Create default three-point lighting system
+    this.createDefaultLights();
+  }
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10, 10, 10);
-    this.scene.add(directionalLight);
+  private createDefaultLights(): void {
+    // Create a group to hold all default lights
+    this.defaultLights = new THREE.Group();
+    this.defaultLights.name = 'DefaultLights';
+
+    // Key Light (main light) - bright, from upper front-right
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    keyLight.position.set(5, 8, 5);
+    keyLight.name = 'KeyLight';
+    this.defaultLights.add(keyLight);
+
+    // Fill Light - softer, from upper front-left to reduce harsh shadows
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+    fillLight.position.set(-5, 6, 3);
+    fillLight.name = 'FillLight';
+    this.defaultLights.add(fillLight);
+
+    // Back Light - rim light from behind to separate subject from background
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    backLight.position.set(0, 5, -8);
+    backLight.name = 'BackLight';
+    this.defaultLights.add(backLight);
+
+    // Ambient light for overall scene illumination
+    const ambient = new THREE.AmbientLight(0xffffff, 0.3);
+    ambient.name = 'AmbientLight';
+    this.defaultLights.add(ambient);
+
+    // Default lights are initially visible (not attached to camera yet)
+    this.scene.add(this.defaultLights);
   }
 
   getScene(): THREE.Scene {
@@ -206,6 +235,39 @@ export class SceneManager {
     return Array.from(this.objects.values());
   }
 
+  // Light management methods
+  onUserLightAdded(): void {
+    // When user adds their first light, disable default lights
+    if (!this.hasUserLights && this.defaultLights) {
+      this.hasUserLights = true;
+      
+      // Remove default lights from camera or scene
+      if (this.perspectiveCamera && this.perspectiveCamera.children.includes(this.defaultLights)) {
+        this.perspectiveCamera.remove(this.defaultLights);
+      } else {
+        this.scene.remove(this.defaultLights);
+      }
+    }
+  }
+
+  onAllUserLightsRemoved(): void {
+    // When user removes all lights, re-enable default lights
+    if (this.hasUserLights && this.defaultLights) {
+      this.hasUserLights = false;
+      
+      // Attach default lights to camera if available, otherwise to scene
+      if (this.perspectiveCamera) {
+        this.perspectiveCamera.add(this.defaultLights);
+      } else {
+        this.scene.add(this.defaultLights);
+      }
+    }
+  }
+
+  hasDefaultLights(): boolean {
+    return !this.hasUserLights;
+  }
+
   setSelectedObject(id: string | null): void {
     // Remove previous outline
     if (this.outlineMesh) {
@@ -260,6 +322,16 @@ export class SceneManager {
 
   setPerspectiveCamera(camera: THREE.PerspectiveCamera): void {
     this.perspectiveCamera = camera;
+    
+    // Attach default lights to perspective camera so they move with it
+    if (this.defaultLights && !this.hasUserLights) {
+      // Remove from scene and add to camera
+      this.scene.remove(this.defaultLights);
+      camera.add(this.defaultLights);
+      
+      // NOTE: We don't add the camera to the main scene here
+      // It will be added to individual viewport scenes as needed
+    }
   }
 
   getPerspectiveCamera(): THREE.PerspectiveCamera | null {
