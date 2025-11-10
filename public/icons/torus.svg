@@ -1,49 +1,35 @@
 <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <!-- 1970s Cyberpunk Torus with grid pattern -->
   <defs>
     <linearGradient id="torusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#ff0066;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#cc0044;stop-opacity:1" />
     </linearGradient>
+    <radialGradient id="torusRadial" cx="50%" cy="50%">
+      <stop offset="0%" style="stop-color:#220011;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#440022;stop-opacity:1" />
+    </radialGradient>
     <filter id="torusGlow">
-      <feGaussianBlur stdDeviation="0.7" result="coloredBlur"/>
+      <feGaussianBlur stdDeviation="0.8" result="coloredBlur"/>
       <feMerge>
         <feMergeNode in="coloredBlur"/>
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
   </defs>
-  
-  <!-- Outer ring -->
-  <circle cx="16" cy="16" r="11" fill="none" stroke="url(#torusGrad)" stroke-width="5" opacity="0.3" filter="url(#torusGlow)"/>
-  
-  <!-- Main torus path -->
-  <path d="M 16 6 A 10 10 0 0 1 26 16 A 10 10 0 0 1 16 26 A 10 10 0 0 1 6 16 A 10 10 0 0 1 16 6 Z" 
-        fill="none" stroke="url(#torusGrad)" stroke-width="4" filter="url(#torusGlow)"/>
-  
-  <!-- Inner hole -->
-  <circle cx="16" cy="16" r="6" fill="#220011" stroke="url(#torusGrad)" stroke-width="1"/>
-  
-  <!-- Grid lines on torus -->
-  <path d="M 12 8 Q 16 10 20 8" fill="none" stroke="#ff0066" stroke-width="0.5" opacity="0.4"/>
-  <path d="M 10 12 Q 16 14 22 12" fill="none" stroke="#ff0066" stroke-width="0.5" opacity="0.4"/>
-  <path d="M 8 16 Q 16 18 24 16" fill="none" stroke="#ff0066" stroke-width="0.5" opacity="0.4"/>
-  <path d="M 10 20 Q 16 22 22 20" fill="none" stroke="#ff0066" stroke-width="0.5" opacity="0.4"/>
-  <path d="M 12 24 Q 16 26 20 24" fill="none" stroke="#ff0066" stroke-width="0.5" opacity="0.4"/>
-  
-  <!-- Vertical grid lines -->
-  <path d="M 8 12 Q 10 16 8 20" fill="none" stroke="#ff0066" stroke-width="0.4" opacity="0.3"/>
-  <path d="M 12 8 Q 14 16 12 24" fill="none" stroke="#ff0066" stroke-width="0.4" opacity="0.3"/>
-  <path d="M 20 8 Q 18 16 20 24" fill="none" stroke="#ff0066" stroke-width="0.4" opacity="0.3"/>
-  <path d="M 24 12 Q 22 16 24 20" fill="none" stroke="#ff0066" stroke-width="0.4" opacity="0.3"/>
-  
-  <!-- Highlight dots -->
-  <circle cx="16" cy="6" r="1" fill="#ff0066" opacity="0.8"/>
-  <circle cx="26" cy="16" r="1" fill="#ff0066" opacity="0.8"/>
-  <circle cx="16" cy="26" r="1" fill="#ff0066" opacity="0.8"/>
-  <circle cx="6" cy="16" r="1" fill="#ff0066" opacity="0.8"/>
-  
-  <!-- Corner tech marks -->
-  <line x1="2" y1="16" x2="4" y2="16" stroke="#ff0066" stroke-width="1.5" opacity="0.6"/>
-  <line x1="28" y1="16" x2="30" y2="16" stroke="#ff0066" stroke-width="1.5" opacity="0.6"/>
+  <circle cx="16" cy="16" r="11" fill="none" stroke="url(#torusGrad)" stroke-width="1.5" opacity="0.3" filter="url(#torusGlow)"/>
+  <circle cx="16" cy="16" r="10" fill="none" stroke="url(#torusGrad)" stroke-width="2.5" filter="url(#torusGlow)"/>
+  <circle cx="16" cy="16" r="5.5" fill="url(#torusRadial)" stroke="#ff0066" stroke-width="0.5" opacity="0.5"/>
+  <circle cx="16" cy="16" r="6.5" fill="none" stroke="url(#torusGrad)" stroke-width="1.5" opacity="0.7"/>
+  <line x1="16" y1="6" x2="16" y2="9" stroke="#ff0066" stroke-width="0.5" opacity="0.5"/>
+  <line x1="16" y1="23" x2="16" y2="26" stroke="#ff0066" stroke-width="0.5" opacity="0.5"/>
+  <line x1="6" y1="16" x2="9" y2="16" stroke="#ff0066" stroke-width="0.5" opacity="0.5"/>
+  <line x1="23" y1="16" x2="26" y2="16" stroke="#ff0066" stroke-width="0.5" opacity="0.5"/>
+  <line x1="9.8" y1="9.8" x2="11.9" y2="11.9" stroke="#ff0066" stroke-width="0.4" opacity="0.4"/>
+  <line x1="22.2" y1="9.8" x2="20.1" y2="11.9" stroke="#ff0066" stroke-width="0.4" opacity="0.4"/>
+  <line x1="9.8" y1="22.2" x2="11.9" y2="20.1" stroke="#ff0066" stroke-width="0.4" opacity="0.4"/>
+  <line x1="22.2" y1="22.2" x2="20.1" y2="20.1" stroke="#ff0066" stroke-width="0.4" opacity="0.4"/>
+  <circle cx="16" cy="16" r="8" fill="none" stroke="#ff0066" stroke-width="0.3" opacity="0.3" stroke-dasharray="2,2"/>
+  <circle cx="16" cy="16" r="9" fill="none" stroke="#ff0066" stroke-width="0.3" opacity="0.3" stroke-dasharray="2,2"/>
+  <circle cx="16" cy="16" r="10.5" fill="none" stroke="#ff3388" stroke-width="0.8" opacity="0.4" stroke-dasharray="3,3"/>
+  <circle cx="16" cy="16" r="0.8" fill="#ff0066" opacity="0.6"/>
 </svg>

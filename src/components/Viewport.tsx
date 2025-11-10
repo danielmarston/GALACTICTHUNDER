@@ -601,7 +601,8 @@ export function Viewport({
                 const radius = center.distanceTo(radiusPoint);
                 
                 createdObject = sceneManager.addSphere(center);
-                createdObject.mesh.scale.setScalar(radius);
+                // Sphere geometry has base radius of 0.5, so scale by radius * 2 to match preview
+                createdObject.mesh.scale.setScalar(radius * 2);
                 break;
               }
               case 'cylinder': {
