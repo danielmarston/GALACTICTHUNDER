@@ -1,4 +1,5 @@
 import type { SceneObject } from '../types/types';
+import * as THREE from 'three';
 
 interface ParametersPanelProps {
   selectedObject: SceneObject | null;
@@ -233,18 +234,260 @@ export function ParametersPanel({ selectedObject, onUpdateTransform }: Parameter
 
       <div style={{ marginBottom: '16px' }}>
         <h4 style={{ color: '#aaa', fontSize: '12px', marginBottom: '8px', marginTop: 0 }}>
-          Geometry
+          Dimensions
         </h4>
-        {selectedObject.type === 'cube' && (
-          <div style={{ fontSize: '12px', color: '#fff' }}>
-            <strong>Size:</strong> 1.0 × 1.0 × 1.0
-          </div>
-        )}
-        {selectedObject.type === 'sphere' && (
-          <div style={{ fontSize: '12px', color: '#fff' }}>
-            <strong>Radius:</strong> 0.5
-          </div>
-        )}
+        
+        {selectedObject.type === 'cube' && (() => {
+          const geometry = selectedObject.mesh.geometry as THREE.BoxGeometry;
+          const params = geometry.parameters;
+          return (
+            <>
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Width × Height × Depth</div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={params.width?.toFixed(2) || '1.00'}
+                    onChange={(e) => {
+                      const newWidth = parseFloat(e.target.value) || 0.1;
+                      const newGeometry = new THREE.BoxGeometry(newWidth, params.height, params.depth);
+                      selectedObject.mesh.geometry.dispose();
+                      selectedObject.mesh.geometry = newGeometry;
+                      onUpdateTransform?.();
+                    }}
+                    style={inputStyle}
+                  />
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={params.height?.toFixed(2) || '1.00'}
+                    onChange={(e) => {
+                      const newHeight = parseFloat(e.target.value) || 0.1;
+                      const newGeometry = new THREE.BoxGeometry(params.width, newHeight, params.depth);
+                      selectedObject.mesh.geometry.dispose();
+                      selectedObject.mesh.geometry = newGeometry;
+                      onUpdateTransform?.();
+                    }}
+                    style={inputStyle}
+                  />
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={params.depth?.toFixed(2) || '1.00'}
+                    onChange={(e) => {
+                      const newDepth = parseFloat(e.target.value) || 0.1;
+                      const newGeometry = new THREE.BoxGeometry(params.width, params.height, newDepth);
+                      selectedObject.mesh.geometry.dispose();
+                      selectedObject.mesh.geometry = newGeometry;
+                      onUpdateTransform?.();
+                    }}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+            </>
+          );
+        })()}
+        
+        {selectedObject.type === 'sphere' && (() => {
+          const geometry = selectedObject.mesh.geometry as THREE.SphereGeometry;
+          const params = geometry.parameters;
+          return (
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Radius</div>
+              <input
+                type="number"
+                step="0.1"
+                value={params.radius?.toFixed(2) || '0.50'}
+                onChange={(e) => {
+                  const newRadius = parseFloat(e.target.value) || 0.1;
+                  const newGeometry = new THREE.SphereGeometry(newRadius, 32, 32);
+                  selectedObject.mesh.geometry.dispose();
+                  selectedObject.mesh.geometry = newGeometry;
+                  onUpdateTransform?.();
+                }}
+                style={inputStyle}
+              />
+            </div>
+          );
+        })()}
+        
+        {selectedObject.type === 'cylinder' && (() => {
+          const geometry = selectedObject.mesh.geometry as THREE.CylinderGeometry;
+          const params = geometry.parameters;
+          return (
+            <>
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Radius (Top/Bottom)</div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={params.radiusTop?.toFixed(2) || '0.50'}
+                    onChange={(e) => {
+                      const newRadius = parseFloat(e.target.value) || 0.1;
+                      const newGeometry = new THREE.CylinderGeometry(newRadius, params.radiusBottom, params.height, 32);
+                      selectedObject.mesh.geometry.dispose();
+                      selectedObject.mesh.geometry = newGeometry;
+                      onUpdateTransform?.();
+                    }}
+                    style={inputStyle}
+                  />
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={params.radiusBottom?.toFixed(2) || '0.50'}
+                    onChange={(e) => {
+                      const newRadius = parseFloat(e.target.value) || 0.1;
+                      const newGeometry = new THREE.CylinderGeometry(params.radiusTop, newRadius, params.height, 32);
+                      selectedObject.mesh.geometry.dispose();
+                      selectedObject.mesh.geometry = newGeometry;
+                      onUpdateTransform?.();
+                    }}
+                    style={inputStyle}
+                  />
+                </div>
+              </div>
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Height</div>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={params.height?.toFixed(2) || '1.00'}
+                  onChange={(e) => {
+                    const newHeight = parseFloat(e.target.value) || 0.1;
+                    const newGeometry = new THREE.CylinderGeometry(params.radiusTop, params.radiusBottom, newHeight, 32);
+                    selectedObject.mesh.geometry.dispose();
+                    selectedObject.mesh.geometry = newGeometry;
+                    onUpdateTransform?.();
+                  }}
+                  style={inputStyle}
+                />
+              </div>
+            </>
+          );
+        })()}
+        
+        {selectedObject.type === 'cone' && (() => {
+          const geometry = selectedObject.mesh.geometry as THREE.ConeGeometry;
+          const params = geometry.parameters;
+          return (
+            <>
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Radius</div>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={params.radius?.toFixed(2) || '0.50'}
+                  onChange={(e) => {
+                    const newRadius = parseFloat(e.target.value) || 0.1;
+                    const newGeometry = new THREE.ConeGeometry(newRadius, params.height, 32);
+                    selectedObject.mesh.geometry.dispose();
+                    selectedObject.mesh.geometry = newGeometry;
+                    onUpdateTransform?.();
+                  }}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Height</div>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={params.height?.toFixed(2) || '1.00'}
+                  onChange={(e) => {
+                    const newHeight = parseFloat(e.target.value) || 0.1;
+                    const newGeometry = new THREE.ConeGeometry(params.radius, newHeight, 32);
+                    selectedObject.mesh.geometry.dispose();
+                    selectedObject.mesh.geometry = newGeometry;
+                    onUpdateTransform?.();
+                  }}
+                  style={inputStyle}
+                />
+              </div>
+            </>
+          );
+        })()}
+        
+        {selectedObject.type === 'torus' && (() => {
+          const geometry = selectedObject.mesh.geometry as THREE.TorusGeometry;
+          const params = geometry.parameters;
+          return (
+            <>
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Major Radius</div>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={params.radius?.toFixed(2) || '0.50'}
+                  onChange={(e) => {
+                    const newRadius = parseFloat(e.target.value) || 0.1;
+                    const newGeometry = new THREE.TorusGeometry(newRadius, params.tube, 16, 100);
+                    selectedObject.mesh.geometry.dispose();
+                    selectedObject.mesh.geometry = newGeometry;
+                    onUpdateTransform?.();
+                  }}
+                  style={inputStyle}
+                />
+              </div>
+              <div style={{ marginBottom: '8px' }}>
+                <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Tube Radius</div>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={params.tube?.toFixed(2) || '0.20'}
+                  onChange={(e) => {
+                    const newTube = parseFloat(e.target.value) || 0.01;
+                    const newGeometry = new THREE.TorusGeometry(params.radius, newTube, 16, 100);
+                    selectedObject.mesh.geometry.dispose();
+                    selectedObject.mesh.geometry = newGeometry;
+                    onUpdateTransform?.();
+                  }}
+                  style={inputStyle}
+                />
+              </div>
+            </>
+          );
+        })()}
+        
+        {selectedObject.type === 'plane' && (() => {
+          const geometry = selectedObject.mesh.geometry as THREE.PlaneGeometry;
+          const params = geometry.parameters;
+          return (
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ color: '#aaa', fontSize: '11px', marginBottom: '4px', fontWeight: 'bold' }}>Width × Height</div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={params.width?.toFixed(2) || '1.00'}
+                  onChange={(e) => {
+                    const newWidth = parseFloat(e.target.value) || 0.1;
+                    const newGeometry = new THREE.PlaneGeometry(newWidth, params.height);
+                    selectedObject.mesh.geometry.dispose();
+                    selectedObject.mesh.geometry = newGeometry;
+                    onUpdateTransform?.();
+                  }}
+                  style={inputStyle}
+                />
+                <input
+                  type="number"
+                  step="0.1"
+                  value={params.height?.toFixed(2) || '1.00'}
+                  onChange={(e) => {
+                    const newHeight = parseFloat(e.target.value) || 0.1;
+                    const newGeometry = new THREE.PlaneGeometry(params.width, newHeight);
+                    selectedObject.mesh.geometry.dispose();
+                    selectedObject.mesh.geometry = newGeometry;
+                    onUpdateTransform?.();
+                  }}
+                  style={inputStyle}
+                />
+              </div>
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

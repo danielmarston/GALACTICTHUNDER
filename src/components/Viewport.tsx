@@ -292,6 +292,12 @@ export function Viewport({
           meshMap.set(obj.id, viewportMesh);
         }
         
+        // Sync geometry if it changed
+        if (viewportMesh.geometry !== obj.mesh.geometry) {
+          viewportMesh.geometry.dispose();
+          viewportMesh.geometry = obj.mesh.geometry;
+        }
+        
         // Sync transform
         viewportMesh.position.copy(obj.mesh.position);
         viewportMesh.rotation.copy(obj.mesh.rotation);
@@ -572,9 +578,6 @@ export function Viewport({
             const objectType = creationStateRef.current.objectType;
             const points = newPoints;
             
-            // Calculate center position and scale based on points
-            let createdObject: any;
-            
             switch (objectType) {
               case 'cube': {
                 // Points: [corner1, corner2, heightPoint]
@@ -590,8 +593,7 @@ export function Viewport({
                 const centerZ = (p1.z + p2.z) / 2;
                 const centerY = p1.y + height / 2;
                 
-                createdObject = sceneManager.addCube(new THREE.Vector3(centerX, centerY, centerZ));
-                createdObject.mesh.scale.set(width, height, depth);
+                sceneManager.addCube(new THREE.Vector3(centerX, centerY, centerZ), width, height, depth);
                 break;
               }
               case 'sphere': {
@@ -600,9 +602,7 @@ export function Viewport({
                 const radiusPoint = new THREE.Vector3(points[1].x, points[1].y, points[1].z);
                 const radius = center.distanceTo(radiusPoint);
                 
-                createdObject = sceneManager.addSphere(center);
-                // Sphere geometry has base radius of 0.5, so scale by radius * 2 to match preview
-                createdObject.mesh.scale.setScalar(radius * 2);
+                sceneManager.addSphere(center, radius);
                 break;
               }
               case 'cylinder': {
@@ -618,8 +618,7 @@ export function Viewport({
                 const height = Math.abs(heightPoint.y - center.y);
                 
                 const finalCenter = new THREE.Vector3(center.x, center.y + height / 2, center.z);
-                createdObject = sceneManager.addCylinder(finalCenter);
-                createdObject.mesh.scale.set(radius, height, radius);
+                sceneManager.addCylinder(finalCenter, radius, radius, height);
                 break;
               }
               case 'cone': {
@@ -635,8 +634,7 @@ export function Viewport({
                 const height = Math.abs(heightPoint.y - center.y);
                 
                 const finalCenter = new THREE.Vector3(center.x, center.y + height / 2, center.z);
-                createdObject = sceneManager.addCone(finalCenter);
-                createdObject.mesh.scale.set(radius, height, radius);
+                sceneManager.addCone(finalCenter, radius, height);
                 break;
               }
               case 'torus': {
@@ -652,9 +650,7 @@ export function Viewport({
                 // const minorPoint = new THREE.Vector3(points[2].x, points[2].y, points[2].z);
                 // const minorRadius = ...
                 
-                createdObject = sceneManager.addTorus(center);
-                createdObject.mesh.scale.set(majorRadius / 0.5, majorRadius / 0.5, majorRadius / 0.5);
-                // Note: Torus scaling is complex, this is a simplified version
+                sceneManager.addTorus(center, majorRadius, majorRadius * 0.2);
                 break;
               }
               case 'plane': {
@@ -668,8 +664,7 @@ export function Viewport({
                 const centerX = (p1.x + p2.x) / 2;
                 const centerZ = (p1.z + p2.z) / 2;
                 
-                createdObject = sceneManager.addPlane(new THREE.Vector3(centerX, 0, centerZ));
-                createdObject.mesh.scale.set(width, 1, depth);
+                sceneManager.addPlane(new THREE.Vector3(centerX, 0, centerZ), width, depth);
                 break;
               }
             }

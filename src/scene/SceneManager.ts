@@ -91,8 +91,8 @@ export class SceneManager {
     return (r << 16) | (g << 8) | b;
   }
 
-  addCube(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
+  addCube(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0), width: number = 1, height: number = 1, depth: number = 1): SceneObject {
+    const geometry = new THREE.BoxGeometry(width, height, depth);
     const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.copy(position);
@@ -111,8 +111,8 @@ export class SceneManager {
     return sceneObject;
   }
 
-  addSphere(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
-    const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+  addSphere(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0), radius: number = 0.5): SceneObject {
+    const geometry = new THREE.SphereGeometry(radius, 32, 32);
     const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.copy(position);
@@ -131,8 +131,8 @@ export class SceneManager {
     return sceneObject;
   }
 
-  addCylinder(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
-    const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 32);
+  addCylinder(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0), radiusTop: number = 0.5, radiusBottom: number = 0.5, height: number = 1): SceneObject {
+    const geometry = new THREE.CylinderGeometry(radiusTop, radiusBottom, height, 32);
     const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.copy(position);
@@ -151,8 +151,8 @@ export class SceneManager {
     return sceneObject;
   }
 
-  addCone(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
-    const geometry = new THREE.ConeGeometry(0.5, 1, 32);
+  addCone(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0), radius: number = 0.5, height: number = 1): SceneObject {
+    const geometry = new THREE.ConeGeometry(radius, height, 32);
     const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.copy(position);
@@ -171,8 +171,8 @@ export class SceneManager {
     return sceneObject;
   }
 
-  addTorus(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0)): SceneObject {
-    const geometry = new THREE.TorusGeometry(0.5, 0.2, 16, 100);
+  addTorus(position: THREE.Vector3 = new THREE.Vector3(0, 0.5, 0), radius: number = 0.5, tube: number = 0.2): SceneObject {
+    const geometry = new THREE.TorusGeometry(radius, tube, 16, 100);
     const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor() });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.copy(position);
@@ -191,8 +191,8 @@ export class SceneManager {
     return sceneObject;
   }
 
-  addPlane(position: THREE.Vector3 = new THREE.Vector3(0, 0, 0)): SceneObject {
-    const geometry = new THREE.PlaneGeometry(1, 1);
+  addPlane(position: THREE.Vector3 = new THREE.Vector3(0, 0, 0), width: number = 1, height: number = 1): SceneObject {
+    const geometry = new THREE.PlaneGeometry(width, height);
     const material = new THREE.MeshPhongMaterial({ color: this.getRandomColor(), side: THREE.DoubleSide });
     const mesh = new THREE.Mesh(geometry, material);
     mesh.position.copy(position);
@@ -313,6 +313,14 @@ export class SceneManager {
     if (this.outlineMesh && this.selectedObjectId) {
       const obj = this.objects.get(this.selectedObjectId);
       if (obj) {
+        // Check if geometry has changed - if so, recreate the outline
+        if (this.outlineMesh.geometry !== obj.mesh.geometry) {
+          // Dispose old outline geometry
+          this.outlineMesh.geometry.dispose();
+          // Clone the new geometry
+          this.outlineMesh.geometry = obj.mesh.geometry.clone();
+        }
+        
         this.outlineMesh.position.copy(obj.mesh.position);
         this.outlineMesh.rotation.copy(obj.mesh.rotation);
         this.outlineMesh.scale.copy(obj.mesh.scale).multiplyScalar(1.05);

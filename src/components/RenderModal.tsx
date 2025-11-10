@@ -328,8 +328,11 @@ export function RenderModal({ isOpen, onClose, sceneManager, settings }: RenderM
           width={settings.resolutionWidth}
           height={settings.resolutionHeight}
           style={{
+            width: `${settings.resolutionWidth}px`,
+            height: `${settings.resolutionHeight}px`,
             maxWidth: '100%',
             maxHeight: 'calc(90vh - 150px)',
+            objectFit: 'contain',
             border: '1px solid #444',
             backgroundColor: '#1a1a1a',
             display: 'block',
